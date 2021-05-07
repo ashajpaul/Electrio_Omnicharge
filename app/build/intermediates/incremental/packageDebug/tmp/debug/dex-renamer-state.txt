@@ -1,0 +1,4 @@
+#Thu May 06 21:51:54 EDT 2021
+base.0=C\:\\Users\\justl\\AndroidStudioProjects\\Electrio_Omnicharge\\app\\build\\intermediates\\dex\\debug\\mergeDexDebug\\classes.dex
+path.0=classes.dex
+renamed.0=classes.dex
