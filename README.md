@@ -1,5 +1,4 @@
 ## Omni Charge App
-___
 #### Future Features
 ___
 - [ ] Remove bloatware from code (no need to scan devices)
