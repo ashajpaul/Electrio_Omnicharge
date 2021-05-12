@@ -2,12 +2,10 @@
     Video: https://www.youtube.com/watch?v=oCMOYS71NIU
     Based on Neil Kolban example for IDF: https://github.com/nkolban/esp32-snippets/blob/master/cpp_utils/tests/BLE%20Tests/SampleNotify.cpp
     Ported to Arduino ESP32 by Evandro Copercini
-
    Create a BLE server that, once we receive a connection, will send periodic notifications.
    The service advertises itself as: 6E400001-B5A3-F393-E0A9-E50E24DCCA9E
    Has a characteristic of: 6E400002-B5A3-F393-E0A9-E50E24DCCA9E - used for receiving data with "WRITE" 
    Has a characteristic of: 6E400003-B5A3-F393-E0A9-E50E24DCCA9E - used to send data with  "NOTIFY"
-
    The design of creating the BLE server is:
    1. Create a BLE Server
    2. Create a BLE Service
@@ -15,7 +13,6 @@
    4. Create a BLE Descriptor on the characteristic
    5. Start the service.
    6. Start advertising.
-
    In this example rxValue is the data received (only accessible inside that function).
    And txValue is the data to be sent, in this example just a byte incremented every second. 
 */
@@ -29,25 +26,26 @@
 #include <Adafruit_ST7789.h> // Hardware-specific library for ST7789
 #include <SPI.h>
 
-//Display Pins 
-#define CS         5
-#define RST        A13
-#define DC         A12
-#define MOSI       23  // Data out
-#define SCLK       18  // Clock out
+//Display Pins (Pins for wiring reference)
+#define CS         5    //D5
+#define RST        A13  //D15
+#define DC         A12  //D2
+#define MOSI       23   //D23 - Data out
+#define SCLK       18   //D18 - Clock out
 
 BLECharacteristic *pCharacteristic;
 bool deviceConnected = false;
 float solarValue = 0;
 float batValue = 0;
-const int solarPin = 5; // get correct pin
-const int batPin = A14; // get correct pin
-char prevSolar[8]; // make sure this is big enuffz
+const int solarPin = A14; // solar voltage pin 
+//const int solarPin = A16;   //solar current pin
+const int batPin = A16;     // get correct pin
+char prevSolar[8];          // make sure this is big enuffz
 char prevBat[8];
 char newSolar[8];
 char newBat[8]; 
-char values[10];
-
+char values[20];
+int voltLen;
 Adafruit_ST7789 tft = Adafruit_ST7789(CS, DC, MOSI, SCLK, RST); //TFT object
 
 
@@ -133,23 +131,43 @@ void setup() {
   drawtext(0, 5, "Charge Controller", ST77XX_GREEN, 3, true); //Title
   drawtext(50, 10, "Solar Output:", ST77XX_GREEN, 3, true); //Solar Output
   drawtext(150, 10, "Battery Voltage:", ST77XX_GREEN, 3, true);//Battery Voltage
-  drawtext(90, 115, "V", ST77XX_GREEN, 3, true);//Voltage label for solar
-  drawtext(190, 115, "V", ST77XX_GREEN, 3, true);//Voltage label for battery
+  drawtext(90, 175, "V", ST77XX_GREEN, 3, true);//Voltage label for solar
+  drawtext(190, 175, "V", ST77XX_GREEN, 3, true);//Voltage label for battery
 }
 
 void loop() {
   if (deviceConnected) {
     
-    solarValue = random(5);
+    //solarValue = random(5);
+    solarValue = analogRead(solarPin) * 0.00401; 
     //solarValue = analogRead(solarPin);
     //batValue = random(5);
-    batValue = analogRead(batPin);
+    batValue = analogRead(batPin) * 0.0041;
     // Let's convert the value to a char array:
+
+    Serial.print("Solar value: "); 
+    Serial.println(solarValue);
+    Serial.print("Battery value: ");  
+    Serial.println(batValue); 
     
     dtostrf(solarValue, 1, 2, newSolar); // float_val, min_width, digits_after_decimal, char_buffer
     dtostrf(batValue, 1, 2, newBat);
+
+    voltLen = 1 + strlen(newSolar) + strlen(newBat);
+
+    for (int i=0; i < voltLen; i++) {
+      if (i < strlen(newSolar)) {
+        values[i] = newSolar[i];
+      }
+      else if (i == (strlen(newSolar))) {
+        values[i] = '-';
+      }
+      else {
+        values[i] = newBat[i % (strlen(newSolar) + 1)];
+      }
+    }
     
-    for (int i=0; i < 10; i++) {
+    /*for (int i=0; i < 10; i++) {
       if (i < 4) {
         values[i] = newSolar[i];
       }
@@ -159,7 +177,7 @@ void loop() {
       else {
         values[i] = newBat[i-5];
       }
-    }
+    }*/
 
 //    pCharacteristic->setValue(&txValue, 1); // To send the integer value
 //    pCharacteristic->setValue("Hello!"); // Sending a test message
@@ -183,7 +201,7 @@ void loop() {
     Serial.print(values);
     Serial.println(" ***");
   }
-  delay(5000); //Change this accordingly to sampling rate
+  delay(1000); //Change this accordingly to sampling rate
 }
 
 void drawtext(int row, int col, char *text, uint16_t colorText, int fontSize, bool textWrap) {
